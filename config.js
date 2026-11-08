@@ -4,5 +4,5 @@
  * (bentuknya: https://script.google.com/macros/s/XXXX/exec)
  * ========================================================== */
 window.BASTER_CONFIG = {
-  API_URL: "PASTE_URL_WEB_APP_DI_SINI"
+  API_URL: "https://script.google.com/macros/s/AKfycbx8rDYhOlI_WfEekuud-_IC5p81G-hNjR-oikRlmsUq9U_TSyVOuSIecbPxVO47D422/exec"
 };
