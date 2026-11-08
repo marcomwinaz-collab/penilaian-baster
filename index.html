@@ -794,7 +794,7 @@ function pPengaturan(){
 function akunModal(id){
   const a=id?S.akun.find(x=>x.id===id):null;
   openModal({title:id?"Ganti password @"+esc(id):"Tambah akun",body:`
-   ${id?"":`<div class="form-row"><div class="field"><label>Username</label><input class="input" id="maU" placeholder="mis. spv.pemda"></div><div class="field"><label>Peran</label><select class="input" id="maR"><option>HRD</option><option>Supervisor</option></select></div></div>`}
+   ${id?"":`<div class="form-row"><div class="field"><label>Username</label><input class="input" id="maU" placeholder="mis. spv.pemda"></div><div class="field"><label>Peran</label><select class="input" id="maR"><option>HRD</option><option>Supervisor</option><option>Manager FnB</option><option>Owner</option></select></div></div>`}
    <div class="field"><label>Nama lengkap</label><input class="input" id="maN" value="${esc(a?.nama||"")}"></div>
    <div class="field"><label>Password ${id?"baru":""}</label><input class="input" id="maP" type="password" autocomplete="new-password"></div>
    <div class="field"><label>Ulangi password</label><input class="input" id="maP2" type="password" autocomplete="new-password"></div><div class="err" id="maErr"></div>`,
