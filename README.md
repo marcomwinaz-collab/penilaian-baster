@@ -17,14 +17,14 @@ GitHub Pages (index.html)  ──HTTPS──▶  Google Apps Script (Code.gs)  �
 1. Buka <https://sheets.new> untuk membuat spreadsheet baru. Beri nama, misalnya **Database Penilaian Baster**.
 2. Klik menu **Extensions → Apps Script**.
 3. Di editor Apps Script, hapus semua isi file `Code.gs`, lalu tempel seluruh isi file [`apps-script/Code.gs`](apps-script/Code.gs). Tekan **Ctrl+S** untuk menyimpan.
-4. Jika Anda ingin langsung memakai data 40 karyawan dan nilai Oktober 2026:
-   1. Klik **＋ → Script** dan beri nama `DataAwal`.
-   2. Tempel isi file `DataAwal.gs`. File ini dikirim terpisah dan **tidak ada di GitHub** karena berisi data pribadi karyawan.
-   3. Simpan.
-5. Di bagian atas editor, pilih fungsi **`setup`**, lalu klik **Run**.
+4. Di bagian atas editor, pilih fungsi **`setup`**, lalu klik **Run**.
    - Google akan meminta izin. Pilih akun Anda → **Advanced** → **Go to … (unsafe)** → **Allow**.
    - Peringatan ini wajar karena skrip ini buatan sendiri, bukan aplikasi yang diverifikasi Google.
-6. Jika Anda memakai data awal, pilih fungsi **`isiDataAwal`**, lalu klik **Run**. Sheet *Outlet, Karyawan, Penilaian, Akun, Pengaturan* akan terisi.
+5. Jika Anda ingin mengambil data dari spreadsheet penilaian lama, pilih fungsi **`imporAwal`**, lalu klik **Run**.
+   - Fungsi ini membaca sheet *Performance Leader* dan *Performance Crew* dari spreadsheet yang ID-nya tercantum di `SUMBER_SPREADSHEET_ID`.
+   - Data dimasukkan sebagai periode `SUMBER_PERIODE`. Ubah kedua nilai itu di bagian bawah `Code.gs` bila perlu.
+   - Fungsi ini aman dijalankan ulang: data dengan periode yang sama akan ditimpa, bukan digandakan.
+6. Hasil impor bisa dicek di menu **View → Executions/Logs**. Di sana terlihat jumlah data yang masuk dan apakah semua total sama dengan spreadsheet lama.
 7. Klik **Deploy → New deployment**, lalu:
    - Klik ikon ⚙ dan pilih **Web app**.
    - **Execute as**: *Me*.
@@ -49,8 +49,7 @@ Bagikan link tersebut ke HRD dan Supervisor. Mereka cukup login dengan akun apli
 
 ## Akun login
 
-- Jika `isiDataAwal` dijalankan, tersedia akun `hrd` dan `supervisor` dengan password awal yang diberikan terpisah. **Segera ganti password** lewat menu **Pengaturan**.
-- Jika data awal tidak dijalankan, halaman login akan meminta Anda membuat akun HRD pertama.
+- Saat aplikasi pertama kali dibuka, halaman login akan meminta Anda **membuat akun HRD pertama**. Username dan password Anda tentukan sendiri.
 - Akun baru dibuat lewat menu **Pengaturan → + Akun**. Semua akun punya akses yang sama.
 - Password disimpan dalam bentuk hash (SHA-256 + salt) di sheet *Akun*. Kolom hash disembunyikan.
 - Sesi login berlaku 6 jam sejak terakhir aktif.
@@ -87,6 +86,6 @@ Jangan mengubah urutan kolom atau nama sheet secara manual. Mengedit nilai di se
 ```
 index.html            Aplikasi web (satu file, logo sudah tertanam)
 config.js             URL Web App Google Apps Script
-apps-script/Code.gs   Backend: tempel di Extensions → Apps Script
+apps-script/Code.gs   Backend + fungsi imporAwal: tempel di Extensions → Apps Script
 .nojekyll             Agar GitHub Pages menyajikan file apa adanya
 ```

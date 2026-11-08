@@ -280,3 +280,84 @@ function tulisBanyak_(coll, list) {
   rg.setNumberFormats(list.map(() => formats_(coll)[0]));
   rg.setValues(list.map(x => toRow_(coll, x.id, x)));
 }
+
+/* ------------------------------------------------------------------ */
+/* Impor dari spreadsheet penilaian lama (sheet Performance Leader &  */
+/* Performance Crew). Jalankan `imporAwal` sekali dari editor.         */
+/* ------------------------------------------------------------------ */
+const SUMBER_SPREADSHEET_ID = '1hAq1BeOl7hyRexeMPCzVsdji98sjs19Qhnu2v4UFXTU';
+const SUMBER_PERIODE = '2026-10'; // periode (tahun-bulan) data di spreadsheet lama
+const NAMA_OUTLET = {
+  GRANDWISATA: 'BASTER GRAND WISATA', JALANBANTENG: 'BASTER JALAN BANTENG', KOTAWISATA: 'BASTER KOTA WISATA',
+  PEMDA: 'BASTER PEMDA', R3: 'BASTER R3 BOGOR', R3BOGOR: 'BASTER R3 BOGOR', TBSIMATUPANG: 'BASTER TB SIMATUPANG',
+};
+
+function imporAwal() {
+  imporDariSpreadsheet_(SUMBER_SPREADSHEET_ID, SUMBER_PERIODE);
+}
+
+function normOutlet_(s) {
+  return String(s || '').toUpperCase().replace(/JL\.?\s*/g, 'JALAN ').replace(/\bBASTER\b/g, '').replace(/[^A-Z0-9]/g, '');
+}
+function slug_(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'x'; }
+
+function imporDariSpreadsheet_(id, periode) {
+  const src = SpreadsheetApp.openById(id);
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    if (!rows_('settings').some(r => r.id === 'indikator')) {
+      put_('settings', 'indikator', { json: JSON.stringify(INDIKATOR_AWAL_), diubah: new Date().toISOString(), diubahOleh: 'impor-awal' });
+    }
+    const outlets = rows_('outlets'), kars = rows_('karyawan');
+    const bobot = INDIKATOR_AWAL_.items.map(i => i.bobot);
+    const now = new Date().toISOString();
+    let n = 0; const beda = [];
+    const cariOutlet = nama => {
+      const key = normOutlet_(nama); const canon = NAMA_OUTLET[key] || String(nama).toUpperCase().replace(/\s+/g, ' ').trim();
+      let o = outlets.find(x => x.nama === canon) || outlets.find(x => normOutlet_(x.nama) === normOutlet_(canon));
+      if (!o) { o = { id: 'o-' + slug_(canon), nama: canon, dibuat: now }; put_('outlets', o.id, o); outlets.push(o); }
+      return o;
+    };
+    [['Performance Leader', 'LEADER', 3], ['Performance Crew', 'CREW', 4]].forEach(([sheetName, kat, off]) => {
+      const sh = src.getSheetByName(sheetName);
+      if (!sh) { Logger.log('Sheet tidak ditemukan: ' + sheetName); return; }
+      sh.getDataRange().getValues().forEach(r => {
+        if (!/^\d+$/.test(String(r[0]).trim()) || !String(r[2] || '').trim()) return;
+        const nama = String(r[2]).replace(/\s+/g, ' ').trim().toUpperCase();
+        const o = cariOutlet(r[1]);
+        const jabatan = kat === 'CREW' ? String(r[3] || '').trim().toUpperCase() : 'LEADER';
+        const skor = [];
+        for (let i = 0; i < N_INDIKATOR; i++) { const v = r[off + i]; skor.push(v === '' || v === null || isNaN(Number(v)) ? null : Number(v)); }
+        const total = Math.round(skor.reduce((s, v, i) => s + (v || 0) * bobot[i] / 100, 0) * 100) / 100;
+        const totSheet = Number(r[off + N_INDIKATOR]);
+        if (!isNaN(totSheet) && Math.abs(totSheet - total) > 0.01) beda.push(nama + ': sheet ' + totSheet + ' vs hitung ' + total);
+        let k = kars.find(x => x.nama === nama && x.outletId === o.id) || kars.find(x => x.nama === nama);
+        if (!k) {
+          k = { id: 'k-' + slug_(nama), nama: nama, outletId: o.id, outletNama: o.nama, jabatan: jabatan, kategori: kat, aktif: true, dibuat: now, diubah: now, diubahOleh: 'impor-awal' };
+          if (kars.some(x => x.id === k.id)) k.id += '-' + kars.length;
+          put_('karyawan', k.id, k); kars.push(k);
+        }
+        const pid = periode + '__' + k.id;
+        put_('penilaian', pid, { periode: periode, karyawanId: k.id, nama: nama, outletId: o.id, outletNama: o.nama, kategori: kat, jabatan: jabatan,
+          skor: skor, bobot: bobot, total: total, catatan: '', dibuat: now, dibuatOleh: 'impor-awal', diubah: now, diubahOleh: 'impor-awal' });
+        n++;
+      });
+    });
+    bumpVersion_();
+    Logger.log('Impor selesai: ' + n + ' penilaian periode ' + periode + ' dari "' + src.getName() + '".');
+    Logger.log(beda.length ? 'Total berbeda dengan sheet:\n' + beda.join('\n') : 'Semua total sama dengan spreadsheet asli.');
+  } finally { lock.releaseLock(); }
+}
+
+const INDIKATOR_AWAL_ = {
+  kelompok: [{ kode: 'A', nama: 'Kompetensi' }, { kode: 'B', nama: 'Behavior' }, { kode: 'C', nama: 'Potensi' }],
+  items: [
+    { nama: 'Standar Rasa & Masak', kelompok: 'A', bobot: 8 }, { nama: 'Kecepatan Penyajian', kelompok: 'A', bobot: 8 },
+    { nama: 'Kebersihan (Sanitasi Higiene)', kelompok: 'A', bobot: 8 }, { nama: 'Pengetahuan Menu', kelompok: 'A', bobot: 8 },
+    { nama: 'Penguasaan Operasional', kelompok: 'A', bobot: 8 }, { nama: 'Pelayanan 3S', kelompok: 'B', bobot: 8 },
+    { nama: 'Kerja sama Tim', kelompok: 'B', bobot: 8 }, { nama: 'Disiplin', kelompok: 'B', bobot: 8 },
+    { nama: 'Jujur & Tanggung Jawab', kelompok: 'B', bobot: 8 }, { nama: 'Inisiatif', kelompok: 'B', bobot: 8 },
+    { nama: 'Kemampuan Belajar', kelompok: 'C', bobot: 5 }, { nama: 'Leadership', kelompok: 'C', bobot: 5 },
+    { nama: 'Problem Solving', kelompok: 'C', bobot: 5 }, { nama: 'Motivasi Target', kelompok: 'C', bobot: 5 },
+  ],
+};
